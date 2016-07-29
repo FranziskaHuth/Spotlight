@@ -9,16 +9,13 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
 import android.graphics.Typeface;
-import android.graphics.drawable.AnimatedVectorDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.graphics.drawable.AnimatedVectorDrawableCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v7.widget.AppCompatImageView;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -29,6 +26,7 @@ import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.wooplr.spotlight.prefs.PreferencesManager;
@@ -304,16 +302,7 @@ public class SpotlightView extends FrameLayout {
         handler.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-
-                                        if (isRevealAnimationEnabled)
-                                            startRevealAnimation(activity);
-                                        else {
-                                            startFadinAnimation(activity);
-                                        }
-                                    } else {
                                         startFadinAnimation(activity);
-                                    }
                                 }
                             }
                 , 100);
@@ -325,14 +314,7 @@ public class SpotlightView extends FrameLayout {
      */
     private void dismiss() {
         preferencesManager.setDisplayed(usageId);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            if (isRevealAnimationEnabled)
-                exitRevalAnimation();
-            else
-                startFadeout();
-        } else {
             startFadeout();
-        }
 
     }
 
@@ -359,7 +341,7 @@ public class SpotlightView extends FrameLayout {
 
             @Override
             public void onAnimationEnd(Animator animator) {
-                addArcAnimation(activity);
+                addArc(activity);
             }
 
             @Override
@@ -377,43 +359,6 @@ public class SpotlightView extends FrameLayout {
         anim.start();
     }
 
-    /**
-     * Reverse reveal animation
-     */
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void exitRevalAnimation() {
-        float finalRadius = (float) Math.hypot(getWidth(), getHeight());
-        Animator anim = ViewAnimationUtils.createCircularReveal(this, targetView.getPoint().x, targetView.getPoint().y, finalRadius, 0);
-        anim.setInterpolator(AnimationUtils.loadInterpolator(getContext(),
-                android.R.interpolator.accelerate_decelerate));
-        anim.setDuration(introAnimationDuration);
-
-        anim.addListener(new Animator.AnimatorListener() {
-            @Override
-            public void onAnimationStart(Animator animator) {
-
-            }
-
-            @Override
-            public void onAnimationEnd(Animator animator) {
-                setVisibility(GONE);
-                removeSpotlightView();
-
-            }
-
-            @Override
-            public void onAnimationCancel(Animator animator) {
-
-            }
-
-            @Override
-            public void onAnimationRepeat(Animator animator) {
-
-            }
-        });
-
-        anim.start();
-    }
 
     private void startFadinAnimation(final Activity activity) {
         AlphaAnimation fadeIn = new AlphaAnimation(0.0f, 1.0f);
@@ -427,7 +372,7 @@ public class SpotlightView extends FrameLayout {
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                addArcAnimation(activity);
+                addArc(activity);
             }
 
             @Override
@@ -468,13 +413,12 @@ public class SpotlightView extends FrameLayout {
 
     /**
      * Add arch above and below the circle overlay
-     * Using AnimatedVectorDrawableCompat for pre-Lollipop device
      *
      * @param activity
      */
-    private void addArcAnimation(final Activity activity) {
-        AppCompatImageView mImageView = new AppCompatImageView(activity);
-        mImageView.setImageResource(R.drawable.ic_spotlight_arc);
+    private void addArc(final Activity activity) {
+        ImageView mImageView = new ImageView(activity);
+
         LayoutParams params = new LayoutParams(2 * (circleShape.getRadius() + extraPaddingForArc),
                 2 * (circleShape.getRadius() + extraPaddingForArc));
 
@@ -502,24 +446,13 @@ public class SpotlightView extends FrameLayout {
             }
 
         }
+        Drawable circle = ContextCompat.getDrawable(getContext(),R.drawable.ic_spotlight_arc_small_stroke);
+        circle.setColorFilter(lineAndArcColor, PorterDuff.Mode.SRC_ATOP);
+        mImageView.setBackgroundDrawable(circle);
         mImageView.postInvalidate();
         mImageView.setLayoutParams(params);
         addView(mImageView);
-        PorterDuffColorFilter porterDuffColorFilter = new PorterDuffColorFilter(lineAndArcColor,
-                PorterDuff.Mode.SRC_ATOP);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            AnimatedVectorDrawable avd = (AnimatedVectorDrawable)
-                    ContextCompat.getDrawable(activity, R.drawable.avd_spotlight_arc);
-            avd.setColorFilter(porterDuffColorFilter);
-            mImageView.setImageDrawable(avd);
-            avd.start();
-        } else {
-            AnimatedVectorDrawableCompat avdc =
-                    AnimatedVectorDrawableCompat.create(activity, R.drawable.avd_spotlight_arc);
-            avdc.setColorFilter(porterDuffColorFilter);
-            mImageView.setImageDrawable(avdc);
-            avdc.start();
-        }
+
 
         new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
             @Override
