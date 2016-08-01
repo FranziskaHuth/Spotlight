@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -302,7 +303,16 @@ public class SpotlightView extends FrameLayout {
         handler.postDelayed(new Runnable() {
                                 @Override
                                 public void run() {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+
+                                        if (isRevealAnimationEnabled)
+                                            startRevealAnimation(activity);
+                                        else {
+                                            startFadinAnimation(activity);
+                                        }
+                                    } else {
                                         startFadinAnimation(activity);
+                                    }
                                 }
                             }
                 , 100);
@@ -314,7 +324,14 @@ public class SpotlightView extends FrameLayout {
      */
     private void dismiss() {
         preferencesManager.setDisplayed(usageId);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (isRevealAnimationEnabled)
+                exitRevalAnimation();
+            else
+                startFadeout();
+        } else {
             startFadeout();
+        }
 
     }
 
@@ -385,6 +402,44 @@ public class SpotlightView extends FrameLayout {
         startAnimation(fadeIn);
     }
 
+    /**
+     * Reverse reveal animation
+     */
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private void exitRevalAnimation() {
+        float finalRadius = (float) Math.hypot(getWidth(), getHeight());
+        Animator anim = ViewAnimationUtils.createCircularReveal(this, targetView.getPoint().x, targetView.getPoint().y, finalRadius, 0);
+        anim.setInterpolator(AnimationUtils.loadInterpolator(getContext(),
+                android.R.interpolator.accelerate_decelerate));
+        anim.setDuration(introAnimationDuration);
+
+        anim.addListener(new Animator.AnimatorListener() {
+            @Override
+            public void onAnimationStart(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationEnd(Animator animator) {
+                setVisibility(GONE);
+                removeSpotlightView();
+
+            }
+
+            @Override
+            public void onAnimationCancel(Animator animator) {
+
+            }
+
+            @Override
+            public void onAnimationRepeat(Animator animator) {
+
+            }
+        });
+
+        anim.start();
+    }
+
     private void startFadeout() {
         AlphaAnimation fadeIn = new AlphaAnimation(1.0f, 0.0f);
         fadeIn.setDuration(introAnimationDuration);
@@ -446,8 +501,9 @@ public class SpotlightView extends FrameLayout {
             }
 
         }
-        Drawable circle = ContextCompat.getDrawable(getContext(),R.drawable.ic_spotlight_arc_small_stroke);
+        Drawable circle = ContextCompat.getDrawable(getContext(), R.drawable.ic_spotlight_arc_small_stroke);
         circle.setColorFilter(lineAndArcColor, PorterDuff.Mode.SRC_ATOP);
+
         mImageView.setBackgroundDrawable(circle);
         mImageView.postInvalidate();
         mImageView.setLayoutParams(params);
